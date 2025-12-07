@@ -745,6 +745,59 @@ app.post('/reset', (req, res) => {
   res.json({ ok: true });
 });
 
+// Consult a Doctor endpoint - forwards to n8n webhook
+app.post('/api/consult', async (req, res) => {
+  try {
+    const { fullName, email, phone, location, appointmentType, date, time } = req.body;
+
+    // Validate required fields
+    if (!fullName || !email || !phone || !location || !appointmentType || !date || !time) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Prepare payload for n8n webhook
+    const n8nPayload = {
+      body: {
+        fullName,
+        email,
+        phone,
+        location,
+        appointmentType,
+        date,
+        time
+      }
+    };
+
+    // Forward to n8n webhook
+    const n8nUrl = 'https://dev-marvania1.app.n8n.cloud/webhook-test/2be0d61e-a2a0-48de-867e-4892849296b4';
+
+    const n8nResponse = await fetch(n8nUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(n8nPayload)
+    });
+
+    if (!n8nResponse.ok) {
+      const errorData = await n8nResponse.text();
+      console.error('n8n webhook error:', errorData);
+      return res.status(500).json({ error: 'Failed to schedule appointment with workflow service' });
+    }
+
+    // Success response
+    res.json({
+      success: true,
+      message: 'Appointment scheduled successfully',
+      data: n8nPayload
+    });
+
+  } catch (error) {
+    console.error('Error in /api/consult:', error);
+    res.status(500).json({ error: 'Internal server error: ' + error.message });
+  }
+});
+
 // Serve static frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
