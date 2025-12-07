@@ -746,8 +746,7 @@ function main() {
 
   if (navConsultBtn) {
     navConsultBtn.addEventListener('click', () => {
-      // For now, open default mail client
-      window.location.href = 'mailto:consult@medinsight.ai?subject=Consultation%20Request';
+      window.location.href = '/consult.html';
     });
   }
   if (navContactBtn) {
