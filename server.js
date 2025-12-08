@@ -864,6 +864,60 @@ app.post('/api/consult', async (req, res) => {
   }
 });
 
+// Translation endpoint - translates text to specified language
+app.post('/api/translate', async (req, res) => {
+  try {
+    console.log('📝 Translation request received');
+
+    const { text, targetLanguage } = req.body;
+
+    // Validate input
+    if (!text || typeof text !== 'string') {
+      console.error('Missing or invalid text parameter');
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    if (!targetLanguage || typeof targetLanguage !== 'string') {
+      console.error('Missing or invalid targetLanguage parameter');
+      return res.status(400).json({ error: 'Target language is required' });
+    }
+
+    // Validate target language
+    const validLanguages = ['hi', 'kn', 'en'];
+    if (!validLanguages.includes(targetLanguage)) {
+      return res.status(400).json({ error: 'Unsupported language. Supported: en, hi, kn' });
+    }
+
+    // If target is English, return original text
+    if (targetLanguage === 'en') {
+      return res.json({ translatedText: text });
+    }
+
+    console.log(`🌐 Translating to ${targetLanguage}...`);
+
+    // Call Google Translate API
+    const translatedText = await translateText(text, targetLanguage);
+
+    console.log(`✅ Translation completed for ${targetLanguage}`);
+
+    res.json({
+      originalText: text,
+      translatedText: translatedText,
+      targetLanguage: targetLanguage
+    });
+
+  } catch (error) {
+    console.error('❌ Translation error:', error);
+
+    let errorMessage = 'Translation service error';
+    if (error.message.includes('not configured')) {
+      errorMessage = 'Translation service not configured';
+    }
+
+    res.status(500).json({ error: errorMessage, details: error.message });
+  }
+});
+
 // Serve static frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
