@@ -767,12 +767,11 @@ function splitTextPreservingBrand(text) {
   return segments.filter(segment => segment.length > 0);
 }
 
-async function translateText(text) {
+async function translateSingleText(text, targetLang) {
   if (!text || text.length === 0) return text;
 
   // Check if text contains the brand name
   if (text.includes(BRAND_NAME)) {
-    // Don't translate text containing the brand name
     return text;
   }
 
@@ -782,7 +781,7 @@ async function translateText(text) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text: text,
-        targetLanguage: currentLanguage
+        targetLanguage: targetLang
       })
     });
 
