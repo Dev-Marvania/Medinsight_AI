@@ -85,6 +85,47 @@ const GROQ_TTS_MODEL = process.env.GROQ_TTS_MODEL || 'playai-tts';
 
 console.log(`✅ Groq TTS configured with voice: ${GROQ_TTS_VOICE}, model: ${GROQ_TTS_MODEL}`);
 
+// Google Translate API configuration
+const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
+const GOOGLE_TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2';
+
+if (!GOOGLE_TRANSLATE_API_KEY) {
+  console.warn('⚠️  Google Translate API key not found. Translation features disabled.');
+}
+
+// Helper function to translate text using Google Translate API
+async function translateText(text, targetLanguage) {
+  if (!GOOGLE_TRANSLATE_API_KEY) {
+    throw new Error('Google Translate API key not configured');
+  }
+
+  try {
+    const response = await fetch(`${GOOGLE_TRANSLATE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: text,
+        target: targetLanguage,
+        source: 'en'
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Google Translate API error:', errorData);
+      throw new Error(`Translation API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data.translations[0].translatedText;
+  } catch (error) {
+    console.error('Translation error:', error.message);
+    throw error;
+  }
+}
+
 // Helper function to call Groq API
 async function callGroqAPI(messages, options = {}) {
   const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
