@@ -728,6 +728,237 @@ async function showVersion() {
   } catch { }
 }
 
+// Translation management functions
+function storeOriginalContent() {
+  originalPageContent = {
+    heroDescription: document.querySelector('.hero-description')?.textContent || '',
+    heroBadge: document.querySelector('.hero-badge span')?.textContent || '',
+    heroBtn: document.querySelector('#getStartedBtn .hero-btn-text')?.textContent || '',
+    featureBadge: document.querySelector('.features-subtitle')?.textContent || '',
+    featureTitle: document.querySelector('.features-title')?.textContent || '',
+    featureDescription: document.querySelector('.features-description')?.textContent || '',
+    featureItems: Array.from(document.querySelectorAll('.feature-item span')).map(el => el.textContent),
+    featureCards: Array.from(document.querySelectorAll('.feature-card')).map(card => ({
+      title: card.querySelector('.feature-card-title')?.textContent || '',
+      text: card.querySelector('.feature-card-text')?.textContent || '',
+      stat: card.querySelector('.stat-number')?.textContent || ''
+    })),
+    ctaTitle: document.querySelector('.cta-title')?.textContent || '',
+    ctaText: document.querySelector('.cta-text')?.textContent || '',
+    uploadTitle: document.querySelector('.upload-card .card-title')?.textContent || '',
+    uploadSubtitle: document.querySelector('.upload-card .card-subtitle')?.textContent || '',
+    dropzoneTitle: document.querySelector('.drop-title')?.textContent || '',
+    dropzoneSubtitle: document.querySelector('.drop-subtitle')?.textContent || '',
+    dropFormats: document.querySelector('.drop-formats')?.textContent || '',
+    resultTitle: document.querySelector('.result-card .card-title')?.textContent || '',
+    disclaimer: document.getElementById('disclaimerText')?.textContent || '',
+    footerElements: Array.from(document.querySelectorAll('.footer-heading')).map(el => el.textContent),
+    footerLinks: Array.from(document.querySelectorAll('.footer-link')).map(el => el.textContent),
+    buttons: {
+      navConsult: document.getElementById('navConsultBtn')?.textContent || '',
+      navContact: document.getElementById('navContactBtn')?.textContent || '',
+      navAbout: document.getElementById('navAboutBtn')?.textContent || '',
+      analyze: document.getElementById('analyzeBtn')?.textContent || '',
+      reset: document.getElementById('resetBtn')?.textContent || '',
+      listen: document.getElementById('listenText')?.textContent || '',
+      newAnalysis: document.getElementById('newAnalysisBtn')?.textContent || ''
+    },
+    otherTexts: {
+      resultSections: Array.from(document.querySelectorAll('.result-section-title')).map(el => el.textContent),
+      statLabels: Array.from(document.querySelectorAll('.stat-label')).map(el => el.textContent)
+    }
+  };
+}
+
+async function translateContent(targetLanguage) {
+  if (targetLanguage === 'en') {
+    restoreOriginalContent();
+    return;
+  }
+
+  try {
+    setStatus(`🌐 Translating page to ${targetLanguage === 'hi' ? 'Hindi' : 'Kannada'}...`);
+
+    // Collect all text to translate (excluding title and brand)
+    const textsToTranslate = [
+      originalPageContent.heroDescription,
+      originalPageContent.heroBadge,
+      originalPageContent.featureBadge,
+      originalPageContent.featureDescription,
+      originalPageContent.featureItems.join(' | '),
+      originalPageContent.featureCards.map(c => c.title + ' ' + c.text).join(' | '),
+      originalPageContent.ctaTitle,
+      originalPageContent.ctaText,
+      originalPageContent.uploadSubtitle,
+      originalPageContent.dropzoneTitle,
+      originalPageContent.dropzoneSubtitle,
+      originalPageContent.disclaimer,
+      Object.values(originalPageContent.buttons).join(' | ')
+    ].filter(text => text && text.length > 0);
+
+    const translatedContents = {};
+
+    // Translate each text block
+    for (const text of textsToTranslate) {
+      if (!text || text.length === 0) continue;
+
+      try {
+        const response = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: text,
+            targetLanguage: targetLanguage
+          })
+        });
+
+        if (!response.ok) {
+          console.error('Translation failed:', response.status);
+          continue;
+        }
+
+        const data = await response.json();
+        translatedContents[text] = data.translatedText;
+      } catch (err) {
+        console.error('Translation error:', err);
+      }
+    }
+
+    // Apply translations to the DOM
+    applyTranslations(translatedContents);
+    setStatus('✅ Page translated successfully');
+
+  } catch (error) {
+    console.error('Translation error:', error);
+    setStatus('❌ Translation failed', true);
+  }
+}
+
+function applyTranslations(translatedContents) {
+  const getTranslated = (original) => translatedContents[original] || original;
+
+  // Hero section
+  const heroDesc = document.querySelector('.hero-description');
+  if (heroDesc) heroDesc.textContent = getTranslated(originalPageContent.heroDescription);
+
+  const heroBadgeSpan = document.querySelector('.hero-badge span:not(svg)');
+  if (heroBadgeSpan && !heroBadgeSpan.querySelector('svg')) {
+    const badgeText = heroBadgeSpan.textContent.replace(/Powered by Advanced AI/, '');
+    heroBadgeSpan.textContent = getTranslated('Powered by Advanced AI');
+  }
+
+  // Feature items
+  document.querySelectorAll('.feature-item span').forEach((el, idx) => {
+    el.textContent = getTranslated(originalPageContent.featureItems[idx]) || el.textContent;
+  });
+
+  // Feature section header
+  const featureSub = document.querySelector('.features-subtitle');
+  if (featureSub) featureSub.textContent = getTranslated(originalPageContent.featureBadge);
+
+  const featureDesc = document.querySelector('.features-description');
+  if (featureDesc) featureDesc.textContent = getTranslated(originalPageContent.featureDescription);
+
+  // Feature cards
+  document.querySelectorAll('.feature-card').forEach((card, idx) => {
+    const cardTitle = card.querySelector('.feature-card-title');
+    const cardText = card.querySelector('.feature-card-text');
+    if (cardTitle && originalPageContent.featureCards[idx]) {
+      cardTitle.textContent = getTranslated(originalPageContent.featureCards[idx].title);
+      cardText.textContent = getTranslated(originalPageContent.featureCards[idx].text);
+    }
+  });
+
+  // CTA section
+  const ctaTitle = document.querySelector('.cta-title');
+  if (ctaTitle) ctaTitle.textContent = getTranslated(originalPageContent.ctaTitle);
+
+  const ctaText = document.querySelector('.cta-text');
+  if (ctaText) ctaText.textContent = getTranslated(originalPageContent.ctaText);
+
+  // Upload section
+  const uploadCard = document.querySelector('.upload-card .card-subtitle');
+  if (uploadCard) uploadCard.textContent = getTranslated(originalPageContent.uploadSubtitle);
+
+  // Dropzone
+  const dropTitle = document.querySelector('.drop-title');
+  if (dropTitle) dropTitle.textContent = getTranslated(originalPageContent.dropzoneTitle);
+
+  const dropSubtitle = document.querySelector('.drop-subtitle');
+  if (dropSubtitle) dropSubtitle.textContent = getTranslated(originalPageContent.dropzoneSubtitle);
+
+  // Buttons
+  const analyzeBtn = document.querySelector('#analyzeBtn .hero-btn-text, #analyzeBtn');
+  if (analyzeBtn) analyzeBtn.textContent = getTranslated('Analyze Image');
+
+  const resetBtn = document.querySelector('#resetBtn');
+  if (resetBtn) resetBtn.textContent = getTranslated('Reset');
+
+  const listenText = document.getElementById('listenText');
+  if (listenText) listenText.textContent = getTranslated('Listen');
+
+  const navConsult = document.getElementById('navConsultBtn');
+  if (navConsult) navConsult.textContent = getTranslated('Consult a Doctor');
+
+  const navContact = document.getElementById('navContactBtn');
+  if (navContact) navContact.textContent = getTranslated('Contact');
+
+  const navAbout = document.getElementById('navAboutBtn');
+  if (navAbout) navAbout.textContent = getTranslated('About Us');
+
+  // Disclaimer
+  const disclaimer = document.getElementById('disclaimerText');
+  if (disclaimer) disclaimer.textContent = getTranslated(originalPageContent.disclaimer);
+}
+
+function restoreOriginalContent() {
+  // Restore hero section
+  const heroDesc = document.querySelector('.hero-description');
+  if (heroDesc) heroDesc.textContent = originalPageContent.heroDescription;
+
+  // Restore feature items
+  document.querySelectorAll('.feature-item span').forEach((el, idx) => {
+    el.textContent = originalPageContent.featureItems[idx] || el.textContent;
+  });
+
+  // Restore feature section
+  const featureSub = document.querySelector('.features-subtitle');
+  if (featureSub) featureSub.textContent = originalPageContent.featureBadge;
+
+  const featureDesc = document.querySelector('.features-description');
+  if (featureDesc) featureDesc.textContent = originalPageContent.featureDescription;
+
+  // Restore feature cards
+  document.querySelectorAll('.feature-card').forEach((card, idx) => {
+    const cardTitle = card.querySelector('.feature-card-title');
+    const cardText = card.querySelector('.feature-card-text');
+    if (cardTitle && originalPageContent.featureCards[idx]) {
+      cardTitle.textContent = originalPageContent.featureCards[idx].title;
+      cardText.textContent = originalPageContent.featureCards[idx].text;
+    }
+  });
+
+  // Restore CTA
+  const ctaTitle = document.querySelector('.cta-title');
+  if (ctaTitle) ctaTitle.textContent = originalPageContent.ctaTitle;
+
+  const ctaText = document.querySelector('.cta-text');
+  if (ctaText) ctaText.textContent = originalPageContent.ctaText;
+
+  // Restore buttons
+  const navConsult = document.getElementById('navConsultBtn');
+  if (navConsult) navConsult.textContent = 'Consult a Doctor';
+
+  const navContact = document.getElementById('navContactBtn');
+  if (navContact) navContact.textContent = 'Contact';
+
+  const navAbout = document.getElementById('navAboutBtn');
+  if (navAbout) navAbout.textContent = 'About Us';
+
+  const disclaimer = document.getElementById('disclaimerText');
+  if (disclaimer) disclaimer.textContent = originalPageContent.disclaimer;
+}
+
 function main() {
   clearUIState();
   attachDropzone();
