@@ -33,8 +33,8 @@ app.use(
         "style-src": ["'self'", "https:", "'unsafe-inline'"],
         // Allow media loaded from our origin and blob: URLs for audio playback
         "media-src": ["'self'", "blob:"],
-        // Allow API calls to Groq and n8n
-        "connect-src": ["'self'", "https://api.groq.com", "https://dev-marvania1.app.n8n.cloud"],
+        // Allow API calls to Groq, n8n, and Google Translate
+        "connect-src": ["'self'", "https://api.groq.com", "https://dev-marvania1.app.n8n.cloud", "https://translation.googleapis.com","https://generativelanguage.googleapis.com"],
         // Optional: upgrade-insecure-requests is enabled by defaults
       }
     },
@@ -55,15 +55,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Groq configuration
+// Groq configuration (kept for TTS only)
 const API_KEY = process.env.GROQ_API_KEY || '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';
-const MODEL_NAME = 'meta-llama/llama-4-maverick-17b-128e-instruct';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
-if (!API_KEY) {
-  console.error('ERROR: GROQ_API_KEY is not set. Please set it in .env');
-  process.exit(1);
+// Google Gemini configuration (used for image analysis + OCR)
+import { GoogleGenerativeAI } from '@google/generative-ai';
+const GEMINI_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '';
+const GEMINI_MODEL = process.env.GOOGLE_GEMINI_MODEL || 'gemini-2.5-flash'; // Multimodal model
+
+if (!GEMINI_API_KEY) {
+  console.error('ERROR: GOOGLE_API_KEY (or GEMINI_API_KEY) is not set. Please set it in .env');
+  // Do not exit: allow server to start for TTS/other routes, but /analyze will error without key
 }
+
+const geminiClient = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 // Supabase configuration
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -84,6 +90,81 @@ const GROQ_TTS_VOICE = process.env.GROQ_TTS_VOICE || 'Jennifer-PlayAI';
 const GROQ_TTS_MODEL = process.env.GROQ_TTS_MODEL || 'playai-tts';
 
 console.log(`✅ Groq TTS configured with voice: ${GROQ_TTS_VOICE}, model: ${GROQ_TTS_MODEL}`);
+
+// Helper functions to call Google Gemini for image analysis and OCR
+async function callGeminiVision(promptText, imageBase64, mimeType) {
+  if (!geminiClient) throw new Error('Google Gemini not configured');
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_MODEL });
+  const dataStripped = imageBase64.replace(/^data:[^;]+;base64,/, '');
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: promptText },
+          { inlineData: { data: dataStripped, mimeType } }
+        ]
+      }
+    ]
+  });
+  return result.response.text();
+}
+
+async function callGeminiText(promptText) {
+  if (!geminiClient) throw new Error('Google Gemini not configured');
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_MODEL });
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: promptText }]
+      }
+    ]
+  });
+  return result.response.text();
+}
+
+// Legacy: Helper function to call Groq API (no longer used for analysis, kept for potential fallback) 
+// Google Translate API configuration
+const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
+const GOOGLE_TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2';
+
+if (!GOOGLE_TRANSLATE_API_KEY) {
+  console.warn('⚠️  Google Translate API key not found. Translation features disabled.');
+}
+
+// Helper function to translate text using Google Translate API
+async function translateText(text, targetLanguage) {
+  if (!GOOGLE_TRANSLATE_API_KEY) {
+    throw new Error('Google Translate API key not configured');
+  }
+
+  try {
+    const response = await fetch(`${GOOGLE_TRANSLATE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: text,
+        target: targetLanguage,
+        source: 'en'
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Google Translate API error:', errorData);
+      throw new Error(`Translation API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data.translations[0].translatedText;
+  } catch (error) {
+    console.error('Translation error:', error.message);
+    throw error;
+  }
+}
 
 // Helper function to call Groq API
 async function callGroqAPI(messages, options = {}) {
@@ -120,7 +201,7 @@ app.get('/health', (req, res) => {
 
 // Version endpoint for quick verification
 app.get('/version', (req, res) => {
-  res.json({ version: APP_VERSION, model: MODEL_NAME, partsFormat: 'inlineData', port: process.env.PORT || 3000 });
+  res.json({ version: APP_VERSION, model: GEMINI_MODEL, partsFormat: 'inlineData', port: process.env.PORT || 3000 });
 });
 
 // Helper function to validate image data
@@ -428,26 +509,7 @@ app.post('/analyze', async (req, res) => {
       const ocrPrompt = `Extract all legible text from the supplied image as plain text (preserve important numbers/units like mg/dL, mmHg). Output strict JSON only:\n{\n  "has_text": boolean,\n  "ocr_text": string\n}`;
 
       try {
-        const messages = [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: ocrPrompt },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${dataStripped}`
-                }
-              }
-            ]
-          }
-        ];
-
-        const text = await callGroqAPI(messages, {
-          temperature: 0.0,
-          maxTokens: 2048,
-          responseFormat: { type: 'json_object' }
-        });
+        const text = await callGeminiVision(ocrPrompt, imageBase64, mimeType);
 
         try {
           const parsed = JSON.parse(text);
@@ -537,31 +599,12 @@ IMPORTANT: Be thorough and specific. Include actual numbers, measurements, and v
         textContent += `\n\nUser-stated modality hint: ${modality}`;
       }
 
-      const messages = [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: textContent },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${dataStripped}`
-              }
-            }
-          ]
-        }
-      ];
-
-      return await callGroqAPI(messages, {
-        temperature: 0.0,
-        maxTokens: 2048,
-        responseFormat: { type: 'json_object' }
-      });
+      return await callGeminiVision(textContent, imageBase64, mimeType);
     }
 
     // Decide model and whether to run OCR based on user-selected modality
     const wantsOCR = modality === 'blood_test' || modality === 'prescription';
-    const modelForThis = MODEL_NAME;
+    const modelForThis = GEMINI_MODEL;
     let ocr = { has_text: false, ocr_text: '' };
 
     if (wantsOCR) {
@@ -820,6 +863,60 @@ app.post('/api/consult', async (req, res) => {
     console.error('❌ Error in /api/consult:', error);
     res.set('Content-Type', 'application/json');
     res.status(500).json({ error: 'Internal server error: ' + error.message });
+  }
+});
+
+// Translation endpoint - translates text to specified language
+app.post('/api/translate', async (req, res) => {
+  try {
+    console.log('📝 Translation request received');
+
+    const { text, targetLanguage } = req.body;
+
+    // Validate input
+    if (!text || typeof text !== 'string') {
+      console.error('Missing or invalid text parameter');
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    if (!targetLanguage || typeof targetLanguage !== 'string') {
+      console.error('Missing or invalid targetLanguage parameter');
+      return res.status(400).json({ error: 'Target language is required' });
+    }
+
+    // Validate target language
+    const validLanguages = ['hi', 'kn', 'en'];
+    if (!validLanguages.includes(targetLanguage)) {
+      return res.status(400).json({ error: 'Unsupported language. Supported: en, hi, kn' });
+    }
+
+    // If target is English, return original text
+    if (targetLanguage === 'en') {
+      return res.json({ translatedText: text });
+    }
+
+    console.log(`🌐 Translating to ${targetLanguage}...`);
+
+    // Call Google Translate API
+    const translatedText = await translateText(text, targetLanguage);
+
+    console.log(`✅ Translation completed for ${targetLanguage}`);
+
+    res.json({
+      originalText: text,
+      translatedText: translatedText,
+      targetLanguage: targetLanguage
+    });
+
+  } catch (error) {
+    console.error('❌ Translation error:', error);
+
+    let errorMessage = 'Translation service error';
+    if (error.message.includes('not configured')) {
+      errorMessage = 'Translation service not configured';
+    }
+
+    res.status(500).json({ error: errorMessage, details: error.message });
   }
 });
 

@@ -1,6 +1,6 @@
 # MedInsight - Medical Image Analyzer
 
-Analyze X-rays, blood test reports, and prescriptions using Groq AI with text-to-speech capabilities powered by Groq's PlayAI TTS.
+Analyze X-rays, blood test reports, and prescriptions using Google Gemini for image understanding and OCR, with text-to-speech powered by Groq's PlayAI TTS.
 
 ## Quick start
 
@@ -13,8 +13,9 @@ npm install
 
 3. Set your API key:
 
-- Copy `.env.example` to `.env`
-- Set `GROQ_API_KEY` to your Groq API key (get it from https://console.groq.com/)
+- Create a `.env` file
+- Set `GOOGLE_API_KEY` to your Google Gemini API key (https://aistudio.google.com/). Ensure your key has access to Gemini 2.5 Flash multimodal.
+- Set `GROQ_API_KEY` for TTS if you are using Groq PlayAI TTS (https://console.groq.com/).
 - Optionally configure TTS settings (voice, model)
 - Optionally set Supabase credentials for database features
 
@@ -33,7 +34,7 @@ Then open http://localhost:3000 in your browser.
 
 ## Features
 
-- **Medical Image Analysis**: Analyze X-rays, blood test reports, and prescriptions using Groq's LLama models
+- **Medical Image Analysis**: Analyze X-rays, blood test reports, and prescriptions using Google Gemini (2.5 Flash) multimodal model
 - **OCR Integration**: Automatic text extraction from blood tests and prescriptions for detailed analysis
 - **Text-to-Speech**: Listen to analysis results using Groq's PlayAI TTS with multiple voice options
 - **Database Integration**: Optional Supabase integration for storing analysis history and statistics
@@ -43,7 +44,7 @@ Then open http://localhost:3000 in your browser.
 ## How it works
 
 - Frontend: drag-and-drop image upload, required modality selection (X-ray, Blood Test, Prescription), and color-coded results (green/yellow/red). Displays an OCR excerpt for Blood Test/Prescription.
-- Backend: Express server with `/analyze` endpoint using Groq AI. For X-ray: image analysis only. For Blood Test/Prescription: OCR + image analysis for comprehensive results.
+- Backend: Express server with `/analyze` endpoint using Google Gemini (Gemini 2.5 Flash) multimodal model. For X-ray: image analysis only. For Blood Test/Prescription: OCR + image analysis for comprehensive results.
 - Text-to-Speech: `/text-to-speech` endpoint using Groq's PlayAI TTS API (requires terms acceptance in Groq console)
 - No caching: both client and server disable caching. The Reset button clears client state.
 
@@ -53,6 +54,8 @@ Then open http://localhost:3000 in your browser.
 
 ```bash
 # Required
+GOOGLE_API_KEY=your_google_api_key_here
+# For TTS
 GROQ_API_KEY=your_groq_api_key_here
 
 # Optional TTS Configuration
@@ -91,7 +94,7 @@ And many more! See https://console.groq.com/docs/speech-text for full list.
 
 - Update the analysis prompt in `server.js` to modify output fields and behavior.
 - Tweak severity rules or UI colors in `public/styles.css`.
-- Change the AI model in the `MODEL_NAME` constant in `server.js`.
+- Change the AI model via `GOOGLE_GEMINI_MODEL` in `.env` (default: gemini-2.5-flash).
 
 ## Disclaimer
 
