@@ -33,8 +33,8 @@ app.use(
         "style-src": ["'self'", "https:", "'unsafe-inline'"],
         // Allow media loaded from our origin and blob: URLs for audio playback
         "media-src": ["'self'", "blob:"],
-        // Allow API calls to Groq and n8n
-        "connect-src": ["'self'", "https://api.groq.com", "https://dev-marvania1.app.n8n.cloud"],
+        // Allow API calls to Groq (TTS), Google Gemini, and n8n
+        "connect-src": ["'self'", "https://api.groq.com", "https://generativelanguage.googleapis.com", "https://dev-marvania1.app.n8n.cloud"],
         // Optional: upgrade-insecure-requests is enabled by defaults
       }
     },
@@ -55,15 +55,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Groq configuration
+// Groq configuration (kept for TTS only)
 const API_KEY = process.env.GROQ_API_KEY || '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';
-const MODEL_NAME = 'meta-llama/llama-4-maverick-17b-128e-instruct';
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
-if (!API_KEY) {
-  console.error('ERROR: GROQ_API_KEY is not set. Please set it in .env');
-  process.exit(1);
+// Google Gemini configuration (used for image analysis + OCR)
+import { GoogleGenerativeAI } from '@google/generative-ai';
+const GEMINI_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '';
+const GEMINI_MODEL = process.env.GOOGLE_GEMINI_MODEL || 'gemini-2.5-flash'; // Multimodal model
+
+if (!GEMINI_API_KEY) {
+  console.error('ERROR: GOOGLE_API_KEY (or GEMINI_API_KEY) is not set. Please set it in .env');
+  // Do not exit: allow server to start for TTS/other routes, but /analyze will error without key
 }
+
+const geminiClient = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 
 // Supabase configuration
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -85,7 +91,40 @@ const GROQ_TTS_MODEL = process.env.GROQ_TTS_MODEL || 'playai-tts';
 
 console.log(`✅ Groq TTS configured with voice: ${GROQ_TTS_VOICE}, model: ${GROQ_TTS_MODEL}`);
 
-// Helper function to call Groq API
+// Helper functions to call Google Gemini for image analysis and OCR
+async function callGeminiVision(promptText, imageBase64, mimeType) {
+  if (!geminiClient) throw new Error('Google Gemini not configured');
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_MODEL });
+  const dataStripped = imageBase64.replace(/^data:[^;]+;base64,/, '');
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: promptText },
+          { inlineData: { data: dataStripped, mimeType } }
+        ]
+      }
+    ]
+  });
+  return result.response.text();
+}
+
+async function callGeminiText(promptText) {
+  if (!geminiClient) throw new Error('Google Gemini not configured');
+  const model = geminiClient.getGenerativeModel({ model: GEMINI_MODEL });
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: promptText }]
+      }
+    ]
+  });
+  return result.response.text();
+}
+
+// Legacy: Helper function to call Groq API (no longer used for analysis, kept for potential fallback) 
 async function callGroqAPI(messages, options = {}) {
   const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
     method: 'POST',
@@ -120,7 +159,7 @@ app.get('/health', (req, res) => {
 
 // Version endpoint for quick verification
 app.get('/version', (req, res) => {
-  res.json({ version: APP_VERSION, model: MODEL_NAME, partsFormat: 'inlineData', port: process.env.PORT || 3000 });
+  res.json({ version: APP_VERSION, model: GEMINI_MODEL, partsFormat: 'inlineData', port: process.env.PORT || 3000 });
 });
 
 // Helper function to validate image data
@@ -428,26 +467,7 @@ app.post('/analyze', async (req, res) => {
       const ocrPrompt = `Extract all legible text from the supplied image as plain text (preserve important numbers/units like mg/dL, mmHg). Output strict JSON only:\n{\n  "has_text": boolean,\n  "ocr_text": string\n}`;
 
       try {
-        const messages = [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: ocrPrompt },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${dataStripped}`
-                }
-              }
-            ]
-          }
-        ];
-
-        const text = await callGroqAPI(messages, {
-          temperature: 0.0,
-          maxTokens: 2048,
-          responseFormat: { type: 'json_object' }
-        });
+        const text = await callGeminiVision(ocrPrompt, imageBase64, mimeType);
 
         try {
           const parsed = JSON.parse(text);
@@ -537,31 +557,12 @@ IMPORTANT: Be thorough and specific. Include actual numbers, measurements, and v
         textContent += `\n\nUser-stated modality hint: ${modality}`;
       }
 
-      const messages = [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: textContent },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:${mimeType};base64,${dataStripped}`
-              }
-            }
-          ]
-        }
-      ];
-
-      return await callGroqAPI(messages, {
-        temperature: 0.0,
-        maxTokens: 2048,
-        responseFormat: { type: 'json_object' }
-      });
+      return await callGeminiVision(textContent, imageBase64, mimeType);
     }
 
     // Decide model and whether to run OCR based on user-selected modality
     const wantsOCR = modality === 'blood_test' || modality === 'prescription';
-    const modelForThis = MODEL_NAME;
+    const modelForThis = GEMINI_MODEL;
     let ocr = { has_text: false, ocr_text: '' };
 
     if (wantsOCR) {
