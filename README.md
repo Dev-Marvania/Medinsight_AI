@@ -96,3 +96,13 @@ And many more! See https://console.groq.com/docs/speech-text for full list.
 ## Disclaimer
 
 This tool is for informational purposes only and does not provide medical diagnosis. Always consult qualified healthcare professionals for medical advice.
+
+## Recent Updates (2025-12-08)
+
+### Accessibility & Navigation Fixes
+- **Consult Page**: Refactored the "Back" button to use a semantic `<a>` tag for robust navigation to the homepage. Fixed z-index layering issues to ensure the top bar is always clickable.
+- **Homepage**: Connected the "Consult a Doctor" button directly to `/consult.html`.
+
+### UI/UX Improvements
+- **Social Icons**: Removed Twitter, GitHub, and LinkedIn icons from the footer for a cleaner look.
+- **Consult Layout**: Fixed z-index layering on `consult.html` to prevent overlapping elements from blocking interactions.
