@@ -33,8 +33,8 @@ app.use(
         "style-src": ["'self'", "https:", "'unsafe-inline'"],
         // Allow media loaded from our origin and blob: URLs for audio playback
         "media-src": ["'self'", "blob:"],
-        // Allow API calls to Groq and n8n
-        "connect-src": ["'self'", "https://api.groq.com", "https://dev-marvania1.app.n8n.cloud"],
+        // Allow API calls to Groq, n8n, and Google Translate
+        "connect-src": ["'self'", "https://api.groq.com", "https://dev-marvania1.app.n8n.cloud", "https://translation.googleapis.com"],
         // Optional: upgrade-insecure-requests is enabled by defaults
       }
     },
@@ -84,6 +84,47 @@ const GROQ_TTS_VOICE = process.env.GROQ_TTS_VOICE || 'Jennifer-PlayAI';
 const GROQ_TTS_MODEL = process.env.GROQ_TTS_MODEL || 'playai-tts';
 
 console.log(`✅ Groq TTS configured with voice: ${GROQ_TTS_VOICE}, model: ${GROQ_TTS_MODEL}`);
+
+// Google Translate API configuration
+const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY;
+const GOOGLE_TRANSLATE_URL = 'https://translation.googleapis.com/language/translate/v2';
+
+if (!GOOGLE_TRANSLATE_API_KEY) {
+  console.warn('⚠️  Google Translate API key not found. Translation features disabled.');
+}
+
+// Helper function to translate text using Google Translate API
+async function translateText(text, targetLanguage) {
+  if (!GOOGLE_TRANSLATE_API_KEY) {
+    throw new Error('Google Translate API key not configured');
+  }
+
+  try {
+    const response = await fetch(`${GOOGLE_TRANSLATE_URL}?key=${GOOGLE_TRANSLATE_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        q: text,
+        target: targetLanguage,
+        source: 'en'
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Google Translate API error:', errorData);
+      throw new Error(`Translation API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data.translations[0].translatedText;
+  } catch (error) {
+    console.error('Translation error:', error.message);
+    throw error;
+  }
+}
 
 // Helper function to call Groq API
 async function callGroqAPI(messages, options = {}) {
@@ -820,6 +861,60 @@ app.post('/api/consult', async (req, res) => {
     console.error('❌ Error in /api/consult:', error);
     res.set('Content-Type', 'application/json');
     res.status(500).json({ error: 'Internal server error: ' + error.message });
+  }
+});
+
+// Translation endpoint - translates text to specified language
+app.post('/api/translate', async (req, res) => {
+  try {
+    console.log('📝 Translation request received');
+
+    const { text, targetLanguage } = req.body;
+
+    // Validate input
+    if (!text || typeof text !== 'string') {
+      console.error('Missing or invalid text parameter');
+      return res.status(400).json({ error: 'Text is required' });
+    }
+
+    if (!targetLanguage || typeof targetLanguage !== 'string') {
+      console.error('Missing or invalid targetLanguage parameter');
+      return res.status(400).json({ error: 'Target language is required' });
+    }
+
+    // Validate target language
+    const validLanguages = ['hi', 'kn', 'en'];
+    if (!validLanguages.includes(targetLanguage)) {
+      return res.status(400).json({ error: 'Unsupported language. Supported: en, hi, kn' });
+    }
+
+    // If target is English, return original text
+    if (targetLanguage === 'en') {
+      return res.json({ translatedText: text });
+    }
+
+    console.log(`🌐 Translating to ${targetLanguage}...`);
+
+    // Call Google Translate API
+    const translatedText = await translateText(text, targetLanguage);
+
+    console.log(`✅ Translation completed for ${targetLanguage}`);
+
+    res.json({
+      originalText: text,
+      translatedText: translatedText,
+      targetLanguage: targetLanguage
+    });
+
+  } catch (error) {
+    console.error('❌ Translation error:', error);
+
+    let errorMessage = 'Translation service error';
+    if (error.message.includes('not configured')) {
+      errorMessage = 'Translation service not configured';
+    }
+
+    res.status(500).json({ error: errorMessage, details: error.message });
   }
 });
 
