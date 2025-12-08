@@ -808,28 +808,41 @@ async function translateContent(targetLanguage) {
     const langName = targetLanguage === 'hi' ? 'हिन्दी (Hindi)' : 'ಕನ್ನಡ (Kannada)';
     setStatus(`🌐 Translating page to ${langName}...`);
 
+    // Batch translation for efficiency - translate up to 5 at a time
+    const batchSize = 5;
+    let translated = 0;
+
     // Translate all stored text elements
-    for (const element of originalPageElements) {
-      const originalText = element.originalText;
-      const textToTranslate = originalText.trim();
+    for (let i = 0; i < originalPageElements.length; i += batchSize) {
+      const batch = originalPageElements.slice(i, Math.min(i + batchSize, originalPageElements.length));
 
-      if (!textToTranslate) continue;
+      await Promise.all(batch.map(async (element) => {
+        const originalText = element.originalText;
+        const textToTranslate = originalText.trim();
 
-      // Skip if it's just the brand name or contains it
-      if (textToTranslate === BRAND_NAME || textToTranslate.includes(BRAND_NAME)) {
-        continue;
-      }
+        if (!textToTranslate) return;
 
-      const translatedText = await translateText(textToTranslate);
+        // Skip if it's just the brand name or contains it
+        if (textToTranslate === BRAND_NAME || textToTranslate.includes(BRAND_NAME)) {
+          return;
+        }
 
-      // Preserve original spacing
-      if (originalText !== textToTranslate) {
-        const leadingSpace = originalText.match(/^\s*/)[0];
-        const trailingSpace = originalText.match(/\s*$/)[0];
-        element.node.textContent = leadingSpace + translatedText + trailingSpace;
-      } else {
-        element.node.textContent = translatedText;
-      }
+        const translatedText = await translateSingleText(textToTranslate, targetLanguage);
+
+        // Preserve original spacing
+        if (originalText !== textToTranslate) {
+          const leadingSpace = originalText.match(/^\s*/)[0];
+          const trailingSpace = originalText.match(/\s*$/)[0];
+          element.node.textContent = leadingSpace + translatedText + trailingSpace;
+        } else {
+          element.node.textContent = translatedText;
+        }
+
+        translated++;
+      }));
+
+      // Update progress
+      setStatus(`🌐 Translating (${translated}/${originalPageElements.length})...`);
     }
 
     setStatus('✅ Page translated successfully');
