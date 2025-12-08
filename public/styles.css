@@ -19,6 +19,26 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/******** Performance & motion preferences ********/
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Hint compositor for commonly animated elements */
+.hero-logo, .hero-title, .hero-badge, .feature-card, .scroll-indicator, .btn, .dropzone, .severity-dot {
+  will-change: transform, opacity;
+}
+
+/* Defer heavy offscreen rendering of below-the-fold sections without visual jank */
+.features-showcase, .landing-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: 1000px;
+}
+
 /* Animated Background - Healthcare Theme */
 .bg-gradient {
   position: fixed;

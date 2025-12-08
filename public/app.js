@@ -951,6 +951,21 @@ function main() {
     });
   }
 
+  // Hint the browser to decode images asynchronously and lazy-load preview
+  if (previewImg) {
+    try {
+      previewImg.loading = 'lazy';
+      previewImg.decoding = 'async';
+    } catch {}
+    previewImg.addEventListener('load', () => {
+      // Set intrinsic size to help browsers reserve aspect-ratio space and reduce CLS
+      if (previewImg.naturalWidth && previewImg.naturalHeight) {
+        previewImg.setAttribute('width', String(previewImg.naturalWidth));
+        previewImg.setAttribute('height', String(previewImg.naturalHeight));
+      }
+    });
+  }
+
   // Listen button - COMPLETELY FIXED VERSION WITH AGGRESSIVE DEBUGGING
   if (listenBtn) {
     listenBtn.addEventListener('click', async () => {

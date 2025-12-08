@@ -8,7 +8,13 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 
-dotenv.config();
+// In local/dev we want .env to override any existing shell env so rotations apply immediately.
+// In production, we typically let the host env win. Adjust as needed.
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config();
+} else {
+  dotenv.config({ override: true });
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,6 +69,17 @@ const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 const GEMINI_API_KEY = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = process.env.GOOGLE_GEMINI_MODEL || 'gemini-2.5-flash'; // Multimodal model
+
+// Masked logging to verify keys are loaded without exposing secrets
+function maskKey(k) {
+  if (!k) return '(missing)';
+  const s = String(k);
+  return s.slice(0, 2) + '…' + s.slice(-4) + ` (${s.length} chars)`;
+}
+console.log(`[PID ${process.pid}] 🔐 Config: Gemini key:`, maskKey(GEMINI_API_KEY));
+console.log(`[PID ${process.pid}] 🔐 GOOGLE_API_KEY:`, maskKey(process.env.GOOGLE_API_KEY));
+console.log(`[PID ${process.pid}] 🔐 GEMINI_API_KEY:`, maskKey(process.env.GEMINI_API_KEY));
+console.log(`[PID ${process.pid}] 🔧 CWD:`, process.cwd());
 
 if (!GEMINI_API_KEY) {
   console.error('ERROR: GOOGLE_API_KEY (or GEMINI_API_KEY) is not set. Please set it in .env');
