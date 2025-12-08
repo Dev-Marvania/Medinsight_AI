@@ -51,6 +51,13 @@ const confidenceValue = document.getElementById('confidenceValue');
 const analysisTime = document.getElementById('analysisTime');
 const itemsCount = document.getElementById('itemsCount');
 
+// Language selector
+const languageSelect = document.getElementById('languageSelect');
+
+// Translation storage and state
+let currentLanguage = 'en';
+let originalPageContent = {};
+
 let currentImage = null; // { base64, mimeType }
 let analysisStartTime = null;
 let isInWorkflow = false;
@@ -721,9 +728,167 @@ async function showVersion() {
   } catch { }
 }
 
+// Translation management - Translate everything except "MedInsight AI"
+const BRAND_NAME = 'MedInsight AI';
+let originalPageElements = [];
+
+function storeOriginalContent() {
+  // Store all text nodes and their original content (excluding script/style tags)
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    null
+  );
+
+  originalPageElements = [];
+  let node;
+
+  while (node = walker.nextNode()) {
+    const text = node.textContent.trim();
+    // Only store non-empty text nodes that aren't in script/style tags
+    if (text && node.parentElement && !['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(node.parentElement.tagName)) {
+      originalPageElements.push({
+        node: node,
+        originalText: node.textContent,
+        parent: node.parentElement
+      });
+    }
+  }
+
+  console.log(`📝 Stored ${originalPageElements.length} text elements for translation`);
+}
+
+function splitTextPreservingBrand(text) {
+  // Split text into parts, preserving "MedInsight AI"
+  const parts = [];
+  const regex = new RegExp(`(${BRAND_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'g');
+  const segments = text.split(regex);
+
+  return segments.filter(segment => segment.length > 0);
+}
+
+async function translateSingleText(text, targetLang) {
+  if (!text || text.length === 0) return text;
+
+  // Check if text contains the brand name
+  if (text.includes(BRAND_NAME)) {
+    return text;
+  }
+
+  try {
+    const response = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: text,
+        targetLanguage: targetLang
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Translation failed:', response.status);
+      return text;
+    }
+
+    const data = await response.json();
+    return data.translatedText;
+  } catch (err) {
+    console.error('Translation error for text:', text, err);
+    return text;
+  }
+}
+
+async function translateContent(targetLanguage) {
+  if (targetLanguage === 'en') {
+    restoreOriginalContent();
+    return;
+  }
+
+  try {
+    const langName = targetLanguage === 'hi' ? 'हिन्दी (Hindi)' : 'ಕನ್ನಡ (Kannada)';
+    setStatus(`🌐 Translating page to ${langName}...`);
+
+    // Batch translation for efficiency - translate up to 5 at a time
+    const batchSize = 5;
+    let translated = 0;
+
+    // Translate all stored text elements
+    for (let i = 0; i < originalPageElements.length; i += batchSize) {
+      const batch = originalPageElements.slice(i, Math.min(i + batchSize, originalPageElements.length));
+
+      await Promise.all(batch.map(async (element) => {
+        const originalText = element.originalText;
+        const textToTranslate = originalText.trim();
+
+        if (!textToTranslate) return;
+
+        // Skip if it's just the brand name or contains it
+        if (textToTranslate === BRAND_NAME || textToTranslate.includes(BRAND_NAME)) {
+          return;
+        }
+
+        const translatedText = await translateSingleText(textToTranslate, targetLanguage);
+
+        // Preserve original spacing
+        if (originalText !== textToTranslate) {
+          const leadingSpace = originalText.match(/^\s*/)[0];
+          const trailingSpace = originalText.match(/\s*$/)[0];
+          element.node.textContent = leadingSpace + translatedText + trailingSpace;
+        } else {
+          element.node.textContent = translatedText;
+        }
+
+        translated++;
+      }));
+
+      // Update progress
+      setStatus(`🌐 Translating (${translated}/${originalPageElements.length})...`);
+    }
+
+    setStatus('✅ Page translated successfully');
+
+  } catch (error) {
+    console.error('Translation error:', error);
+    setStatus('❌ Translation failed', true);
+  }
+}
+
+function restoreOriginalContent() {
+  // Restore all text nodes to their original content
+  for (const element of originalPageElements) {
+    element.node.textContent = element.originalText;
+  }
+}
+
 function main() {
   clearUIState();
   attachDropzone();
+
+  // Initialize translation system after a small delay to ensure DOM is ready
+  setTimeout(() => {
+    storeOriginalContent();
+
+    // Load saved language preference
+    const savedLanguage = localStorage.getItem('medinsightLanguage') || 'en';
+    currentLanguage = savedLanguage;
+    languageSelect.value = savedLanguage;
+
+    // Auto-translate if saved language is not English
+    if (savedLanguage !== 'en') {
+      translateContent(savedLanguage).catch(err => {
+        console.error('Auto-translate failed:', err);
+      });
+    }
+  }, 100);
+
+  // Language selector change event
+  if (languageSelect) {
+    languageSelect.addEventListener('change', async (e) => {
+      currentLanguage = e.target.value;
+      localStorage.setItem('medinsightLanguage', currentLanguage);
+      await translateContent(currentLanguage);
+    });
+  }
 
   // Get Started button - transition from hero to workflow
   if (getStartedBtn) {
