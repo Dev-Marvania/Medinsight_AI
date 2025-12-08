@@ -963,6 +963,23 @@ function main() {
   clearUIState();
   attachDropzone();
 
+  // Initialize translation system
+  storeOriginalContent();
+
+  // Load saved language preference
+  const savedLanguage = localStorage.getItem('medinsightLanguage') || 'en';
+  currentLanguage = savedLanguage;
+  languageSelect.value = savedLanguage;
+
+  // Language selector change event
+  if (languageSelect) {
+    languageSelect.addEventListener('change', async (e) => {
+      currentLanguage = e.target.value;
+      localStorage.setItem('medinsightLanguage', currentLanguage);
+      await translateContent(currentLanguage);
+    });
+  }
+
   // Get Started button - transition from hero to workflow
   if (getStartedBtn) {
     getStartedBtn.addEventListener('click', () => {
