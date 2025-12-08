@@ -122,7 +122,7 @@ function clearUIState() {
   listenBtn.classList.remove('playing');
   listenText.textContent = 'Listen';
   listenBtn.disabled = false;
-  
+
   // Remove TTS setup banner if present
   const setupBanner = document.querySelector('.tts-setup-banner');
   if (setupBanner) {
@@ -178,32 +178,32 @@ async function generateSpeech(analysisText) {
   try {
     // Extract ONLY Summary and Recommended Actions for TTS
     console.log('🎯 Extracting summary and recommendations for TTS...');
-    
+
     let textForTTS = '';
-    
+
     // Extract Summary section (look for different patterns)
     const summaryMatch = analysisText.match(/(?:Executive Summary|Summary)[:\s]*([^\.]+\.)/i);
     if (summaryMatch) {
       textForTTS += 'Summary: ' + summaryMatch[1].trim() + '. ';
     }
-    
+
     // Extract Recommended Actions section
     const actionsMatch = analysisText.match(/Recommended Actions[:\s]*([^\.]+(?:\.[^\.]*)*\.)/i);
     if (actionsMatch) {
       textForTTS += 'Recommended Actions: ' + actionsMatch[1].trim();
     }
-    
+
     // Fallback if sections not found - use first sentence only
     if (!textForTTS.trim()) {
       const sentences = analysisText.replace(/\*\*/g, '').split(/[.!?]+/);
       textForTTS = sentences[0]?.trim() + '.' || 'Analysis complete.';
     }
-    
+
     // Aggressive limit to 200 characters maximum for quota protection
     if (textForTTS.length > 200) {
       textForTTS = textForTTS.substring(0, 197) + '...';
     }
-    
+
     console.log(`📝 TTS Text (${textForTTS.length} chars):`, textForTTS);
 
     // Update button state
@@ -223,7 +223,7 @@ async function generateSpeech(analysisText) {
 
     if (!response.ok) {
       const errorData = await response.json();
-      
+
       // Check if it's a terms acceptance error
       if (errorData.details && errorData.details.includes('terms acceptance')) {
         // Show helpful banner instead of popup
@@ -231,7 +231,7 @@ async function generateSpeech(analysisText) {
         listenBtn.disabled = false;
         listenBtn.classList.remove('loading', 'playing');
         listenText.textContent = 'Setup Required';
-        
+
         // Create a help banner with a link
         const helpBanner = document.createElement('div');
         helpBanner.style.cssText = `
@@ -252,17 +252,17 @@ async function generateSpeech(analysisText) {
           3. Come back and click "Listen" again - it will work immediately!<br><br>
           <small>💡 After accepting terms, audio will generate automatically in this webapp. No more redirects or manual steps!</small>
         `;
-        
+
         // Insert banner after summary text
         const summaryCard = summaryText.closest('.card');
         if (summaryCard && !document.querySelector('.tts-setup-banner')) {
           helpBanner.className = 'tts-setup-banner';
           summaryCard.insertAdjacentElement('afterend', helpBanner);
         }
-        
+
         return;
       }
-      
+
       throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
@@ -272,7 +272,7 @@ async function generateSpeech(analysisText) {
     if (audioBlob.size === 0) {
       throw new Error('Received empty audio file');
     }
-    
+
     // Remove setup banner if it exists (TTS is now working!)
     const setupBanner = document.querySelector('.tts-setup-banner');
     if (setupBanner) {
@@ -283,11 +283,11 @@ async function generateSpeech(analysisText) {
     // PROPER AUDIO SETUP - CLEAR AND DIRECT PLAYBACK
     console.log('🎵 Setting up audio for immediate playback...');
     setStatus('🎵 Preparing audio playback...');
-    
+
     const audioUrl = URL.createObjectURL(audioBlob);
 
     // Completely reset audio element
-    try { audioPlayer.pause(); } catch {}
+    try { audioPlayer.pause(); } catch { }
     audioPlayer.currentTime = 0;
     audioPlayer.volume = 1.0;
     audioPlayer.muted = false;
@@ -352,7 +352,7 @@ async function generateSpeech(analysisText) {
       listenText.textContent = 'Click to Play';
       setStatus('Audio ready - click Listen button to play');
     }
-    
+
     // Enhanced event handlers for audio playback
     audioPlayer.onended = () => {
       console.log('✅ Audio playback ended');
@@ -375,7 +375,7 @@ async function generateSpeech(analysisText) {
         listenText.textContent = 'Continue';
       }
     };
-    
+
     // Error handling
     audioPlayer.onerror = (e) => {
       console.error('Audio loading error:', e);
@@ -914,6 +914,14 @@ function main() {
       window.location.href = '/consult.html';
     });
   }
+
+  // Upload Back Button (Navigate home)
+  const uploadBackBtn = document.getElementById('uploadBackBtn');
+  if (uploadBackBtn) {
+    uploadBackBtn.addEventListener('click', () => {
+      window.location.href = '/';
+    });
+  }
   if (navContactBtn) {
     navContactBtn.addEventListener('click', () => {
       document.getElementById('landingFooter').scrollIntoView({ behavior: 'smooth' });
@@ -962,7 +970,7 @@ function main() {
         hasAnalysisText: !!currentAnalysisText,
         analysisTextLength: currentAnalysisText?.length || 0
       });
-      
+
       // If audio is already loaded, just play/pause it
       if (audioPlayer.src && audioPlayer.src.startsWith('blob:')) {
         console.log('🔄 Existing audio found, toggling playback');

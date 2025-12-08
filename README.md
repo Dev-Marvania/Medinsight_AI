@@ -109,3 +109,4 @@ This tool is for informational purposes only and does not provide medical diagno
 ### UI/UX Improvements
 - **Social Icons**: Removed Twitter, GitHub, and LinkedIn icons from the footer for a cleaner look.
 - **Consult Layout**: Fixed z-index layering on `consult.html` to prevent overlapping elements from blocking interactions.
+- **Upload Section**: Added a "Back" button above the upload card. Clicking it now resets the view and navigates back to the homepage, providing a consistent experience with the Consult page.
