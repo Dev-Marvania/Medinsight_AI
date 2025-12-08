@@ -51,6 +51,13 @@ const confidenceValue = document.getElementById('confidenceValue');
 const analysisTime = document.getElementById('analysisTime');
 const itemsCount = document.getElementById('itemsCount');
 
+// Language selector
+const languageSelect = document.getElementById('languageSelect');
+
+// Translation storage and state
+let currentLanguage = 'en';
+let originalPageContent = {};
+
 let currentImage = null; // { base64, mimeType }
 let analysisStartTime = null;
 let isInWorkflow = false;
