@@ -33,8 +33,8 @@ app.use(
         "style-src": ["'self'", "https:", "'unsafe-inline'"],
         // Allow media loaded from our origin and blob: URLs for audio playback
         "media-src": ["'self'", "blob:"],
-        // Allow API calls to Groq and n8n
-        "connect-src": ["'self'", "https://api.groq.com", "https://dev-marvania1.app.n8n.cloud"],
+        // Allow API calls to Groq, n8n, and Google Translate
+        "connect-src": ["'self'", "https://api.groq.com", "https://dev-marvania1.app.n8n.cloud", "https://translation.googleapis.com"],
         // Optional: upgrade-insecure-requests is enabled by defaults
       }
     },
