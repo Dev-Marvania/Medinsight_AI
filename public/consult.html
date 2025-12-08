@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,7 +8,9 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet">
   <style>
     /* Consult Page Specific Styles */
     .consult-section {
@@ -29,6 +32,7 @@
       align-items: center;
       justify-content: space-between;
       padding: 16px 24px;
+      z-index: 50;
     }
 
     .consult-back-btn {
@@ -44,6 +48,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      text-decoration: none;
     }
 
     .consult-back-btn:hover {
@@ -93,13 +98,33 @@
       animation: slideIn 0.6s ease-out both;
     }
 
-    .form-group:nth-child(1) { animation-delay: 0s; }
-    .form-group:nth-child(2) { animation-delay: 0.05s; }
-    .form-group:nth-child(3) { animation-delay: 0.1s; }
-    .form-group:nth-child(4) { animation-delay: 0.15s; }
-    .form-group:nth-child(5) { animation-delay: 0.2s; }
-    .form-group:nth-child(6) { animation-delay: 0.25s; }
-    .form-group:nth-child(7) { animation-delay: 0.3s; }
+    .form-group:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    .form-group:nth-child(2) {
+      animation-delay: 0.05s;
+    }
+
+    .form-group:nth-child(3) {
+      animation-delay: 0.1s;
+    }
+
+    .form-group:nth-child(4) {
+      animation-delay: 0.15s;
+    }
+
+    .form-group:nth-child(5) {
+      animation-delay: 0.2s;
+    }
+
+    .form-group:nth-child(6) {
+      animation-delay: 0.25s;
+    }
+
+    .form-group:nth-child(7) {
+      animation-delay: 0.3s;
+    }
 
     .form-label {
       display: flex;
@@ -269,6 +294,7 @@
     }
   </style>
 </head>
+
 <body>
   <!-- Animated background -->
   <div class="bg-gradient"></div>
@@ -277,12 +303,13 @@
   <!-- Consult a Doctor Page -->
   <section class="consult-section">
     <div class="consult-topbar">
-      <button id="backBtn" class="consult-back-btn">
+      <a href="/" class="consult-back-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M19 12H5m7-7l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 12H5m7-7l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
         </svg>
         Back
-      </button>
+      </a>
     </div>
 
     <div class="consult-container">
@@ -298,14 +325,8 @@
               Full Name
               <span class="form-required">*</span>
             </label>
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              class="form-input"
-              placeholder="Enter your full name"
-              required
-            />
+            <input type="text" id="fullName" name="fullName" class="form-input" placeholder="Enter your full name"
+              required />
           </div>
 
           <div class="form-group">
@@ -313,14 +334,7 @@
               Email
               <span class="form-required">*</span>
             </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              class="form-input"
-              placeholder="your@email.com"
-              required
-            />
+            <input type="email" id="email" name="email" class="form-input" placeholder="your@email.com" required />
           </div>
         </div>
 
@@ -330,14 +344,7 @@
               Phone Number
               <span class="form-required">*</span>
             </label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              class="form-input"
-              placeholder="+1 (555) 000-0000"
-              required
-            />
+            <input type="tel" id="phone" name="phone" class="form-input" placeholder="+1 (555) 000-0000" required />
           </div>
 
           <div class="form-group">
@@ -345,14 +352,7 @@
               Location
               <span class="form-required">*</span>
             </label>
-            <input
-              type="text"
-              id="location"
-              name="location"
-              class="form-input"
-              placeholder="City, State"
-              required
-            />
+            <input type="text" id="location" name="location" class="form-input" placeholder="City, State" required />
           </div>
         </div>
 
@@ -378,13 +378,7 @@
               Preferred Date
               <span class="form-required">*</span>
             </label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              class="form-input"
-              required
-            />
+            <input type="date" id="date" name="date" class="form-input" required />
           </div>
         </div>
 
@@ -394,13 +388,7 @@
               Preferred Time
               <span class="form-required">*</span>
             </label>
-            <input
-              type="time"
-              id="time"
-              name="time"
-              class="form-input"
-              required
-            />
+            <input type="time" id="time" name="time" class="form-input" required />
           </div>
         </div>
 
@@ -414,7 +402,8 @@
 
       <div class="consult-footer">
         <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
         Your information is secure and will be handled confidentially
       </div>
@@ -425,11 +414,6 @@
     const form = document.getElementById('consultForm');
     const submitBtn = document.getElementById('submitBtn');
     const formStatus = document.getElementById('formStatus');
-    const backBtn = document.getElementById('backBtn');
-
-    backBtn.addEventListener('click', () => {
-      window.history.back();
-    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -511,4 +495,5 @@
     });
   </script>
 </body>
+
 </html>
