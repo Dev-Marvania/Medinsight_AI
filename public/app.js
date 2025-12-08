@@ -906,7 +906,7 @@ function main() {
 
   // Topbar navigation buttons
   const navConsultBtn = document.getElementById('navConsultBtn');
-  const navContactBtn = document.getElementById('navContactBtn');
+
   const navAboutBtn = document.getElementById('navAboutBtn');
 
   if (navConsultBtn) {
@@ -922,11 +922,7 @@ function main() {
       window.location.href = '/';
     });
   }
-  if (navContactBtn) {
-    navContactBtn.addEventListener('click', () => {
-      document.getElementById('landingFooter').scrollIntoView({ behavior: 'smooth' });
-    });
-  }
+
   if (navAboutBtn) {
     navAboutBtn.addEventListener('click', () => {
       document.getElementById('featuresSection').scrollIntoView({ behavior: 'smooth' });

@@ -30,12 +30,20 @@ body {
 }
 
 /* Hint compositor for commonly animated elements */
-.hero-logo, .hero-title, .hero-badge, .feature-card, .scroll-indicator, .btn, .dropzone, .severity-dot {
+.hero-logo,
+.hero-title,
+.hero-badge,
+.feature-card,
+.scroll-indicator,
+.btn,
+.dropzone,
+.severity-dot {
   will-change: transform, opacity;
 }
 
 /* Defer heavy offscreen rendering of below-the-fold sections without visual jank */
-.features-showcase, .landing-footer {
+.features-showcase,
+.landing-footer {
   content-visibility: auto;
   contain-intrinsic-size: 1000px;
 }
@@ -2264,3 +2272,51 @@ body {
   outline: 2px solid #6366f1;
   outline-offset: 2px;
 }
+
+   / *   F o o t e r   C o n t a c t   S e c t i o n   * /     . f o o t e r - c o n t a c t - i n f o    {
+           t e x t - a l i g n :    r i g h t ;
+       
+}
+
+         . f o o t e r - c o n t a c t - t i t l e    {
+           f o n t - f a m i l y :    ' S p a c e   G r o t e s k '  ,    s a n s - s e r i f ;
+           f o n t - s i z e :    1 6 p x ;
+           f o n t - w e i g h t :    7 0 0 ;
+           c o l o r :    # 0 c 4 a 6 e ;
+           m a r g i n :    0   0   4 p x   0 ;
+           t e x t - t r a n s f o r m :    u p p e r c a s e ;
+           l e t t e r - s p a c i n g :    0 . 0 5 e m ;
+       
+}
+
+         . f o o t e r - e m a i l    {
+           m a r g i n :    0 ;
+           f o n t - s i z e :    1 5 p x ;
+           c o l o r :    # 6 4 7 4 8 b ;
+           f o n t - w e i g h t :    5 0 0 ;
+       
+}
+
+         . f o o t e r - e m a i l   a    {
+           c o l o r :    # 0 e a 5 e 9 ;
+           t e x t - d e c o r a t i o n :    n o n e ;
+           t r a n s i t i o n :    c o l o r   0 . 2 s   e a s e ;
+       
+}
+
+         . f o o t e r - e m a i l   a : h o v e r    {
+           c o l o r :    # 0 2 8 4 c 7 ;
+           t e x t - d e c o r a t i o n :    u n d e r l i n e ;
+       
+}
+
+         @ m e d i a   ( m a x - w i d t h :   7 6 8 p x )    {
+           . f o o t e r - c o n t a c t - i n f o    {
+                 t e x t - a l i g n :    l e f t ;
+             
+  }
+
+       
+}
+
+     
