@@ -852,13 +852,22 @@ function main() {
   clearUIState();
   attachDropzone();
 
-  // Initialize translation system
-  storeOriginalContent();
+  // Initialize translation system after a small delay to ensure DOM is ready
+  setTimeout(() => {
+    storeOriginalContent();
 
-  // Load saved language preference
-  const savedLanguage = localStorage.getItem('medinsightLanguage') || 'en';
-  currentLanguage = savedLanguage;
-  languageSelect.value = savedLanguage;
+    // Load saved language preference
+    const savedLanguage = localStorage.getItem('medinsightLanguage') || 'en';
+    currentLanguage = savedLanguage;
+    languageSelect.value = savedLanguage;
+
+    // Auto-translate if saved language is not English
+    if (savedLanguage !== 'en') {
+      translateContent(savedLanguage).catch(err => {
+        console.error('Auto-translate failed:', err);
+      });
+    }
+  }, 100);
 
   // Language selector change event
   if (languageSelect) {
