@@ -939,11 +939,12 @@ function main() {
     uploadSection.classList.remove('collapsed');
   });
 
-  // New analysis button - returns to hero
+  // New analysis button - resets state but stays in workflow
   if (newAnalysisBtn) {
     newAnalysisBtn.addEventListener('click', () => {
       clearUIState();
-      showHero();
+      // Ensure we stay in workflow view and scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 
@@ -960,7 +961,7 @@ function main() {
     try {
       previewImg.loading = 'lazy';
       previewImg.decoding = 'async';
-    } catch {}
+    } catch { }
     previewImg.addEventListener('load', () => {
       // Set intrinsic size to help browsers reserve aspect-ratio space and reduce CLS
       if (previewImg.naturalWidth && previewImg.naturalHeight) {
